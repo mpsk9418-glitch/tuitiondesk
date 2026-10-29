@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TuitionDesk</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1b3d">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#0b1020;color:#fff}
+#login{min-height:100%;display:flex;align-items:center;justify-content:center;padding:20px}
+.box{width:100%;max-width:380px;background:#131b2e;border:1px solid #1f2a44;border-radius:6px;padding:20px 18px 22px;position:relative}
+.box:after{content:"";position:absolute;right:-1px;top:-1px;width:14px;height:14px;background:linear-gradient(225deg,#0b1020 50%,transparent 50%)}
+.title{display:flex;align-items:center;gap:10px;font-style:italic;font-weight:800;font-size:22px;letter-spacing:.5px;margin-bottom:18px}
+.title i{display:inline-block;width:4px;height:22px;background:#f59e0b;border-radius:2px}
+input{width:100%;height:50px;background:#0c1222;border:1px solid #243152;border-radius:4px;color:#fff;font-size:16px;padding:0 14px;margin-bottom:12px;outline:none}
+input::placeholder{color:#6b7280}
+input:focus{border-color:#f59e0b}
+button{width:100%;height:52px;border:0;border-radius:4px;background:linear-gradient(90deg,#f0622a,#dc4316);color:#fff;font-weight:800;font-size:17px;letter-spacing:.5px;cursor:pointer;margin-top:4px}
+button:disabled{opacity:.6}
+.hint{font-size:12px;color:#94a3b8;margin-top:12px;line-height:1.5}
+.err{color:#f87171;font-size:13px;margin-top:10px;min-height:18px}
+iframe{display:none;position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}
+</style>
+</head>
+<body>
+<div id="login">
+  <div class="box">
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button style="margin-top:0;height:40px;font-size:14px;background:#243152" onclick="TD_I18N.setLang('en')">English</button>
+      <button style="margin-top:0;height:40px;font-size:14px;background:#243152" onclick="TD_I18N.setLang('bn')">বাংলা</button>
+    </div>
+    <div class="title"><i></i>LOGIN</div>
+    <input id="user" placeholder="Username ya mobile number" autocomplete="username" autocapitalize="none">
+    <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="go" onclick="start()">LOGIN</button>
+    <div class="err" id="err"></div>
+    <div class="hint">Teacher: username <b>teacher</b> + password.<br>Parent: bachche ka naam ya mobile + PIN.</div>
+  </div>
+</div>
+<iframe id="app"></iframe>
+
+<script src="i18n.js"></script>
+<script>
+const SB_URL='https://pdebygcyjgoifucxbxsl.supabase.co';
+const SB_KEY='sb_publishable_g9-79XigxxLAQu8FxZNp6g_ElNNjKgk';
+const TEACHER_EMAIL='teacher@tuitiondesk.app';
+const TEACHER_NAMES=['teacher','admin'];
+const $=id=>document.getElementById(id);
+
+async function getRows(path){
+  const r=await fetch(SB_URL+'/rest/v1/'+path,{headers:{apikey:SB_KEY}});
+  if(!r.ok) throw new Error('server '+r.status);
+  return r.json();
+}
+async function tryTeacher(pw){
+  const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:TEACHER_EMAIL,password:pw})});
+  const j=await r.json();
+  if(!r.ok||!j.access_token) return false;
+  localStorage.setItem('td_tok',j.access_token);
+  localStorage.setItem('td_ref',j.refresh_token);
+  localStorage.setItem('td_exp',String(Date.now()+(j.expires_in||3600)*1000));
+  return true;
+}
+async function tryParent(u,pin){
+  const p=encodeURIComponent(pin);
+  let rows=[];
+  try{ rows=await getRows('students?mobile=eq.'+encodeURIComponent(u)+'&pin=eq.'+p+'&select=id'); }catch(e){ rows=[]; }
+  if(!rows.length) rows=await getRows('students?name=ilike.'+encodeURIComponent(u)+'&pin=eq.'+p+'&select=id');
+  if(rows.length!==1) return rows.length?'many':null;
+  localStorage.setItem('td_parent',String(rows[0].id));
+  return 'ok';
+}
+function openApp(role){
+  localStorage.setItem('td_role',role);
+  $('app').src = role==='teacher' ? 'teacher/index.html' : 'parent/index.html';
+  $('app').style.display='block';
+  $('login').style.display='none';
+}
+async function start(){
+  $('err').textContent='';
+  const u=$('user').value.trim(), p=$('pass').value.trim();
+  if(!u||!p){ $('err').textContent='Username aur password dono likhein'; return; }
+  $('go').disabled=true;
+  try{
+    if(TEACHER_NAMES.includes(u.toLowerCase())){
+      if(await tryTeacher(p)) return openApp('teacher');
+      $('err').textContent='Teacher ka password galat hai';
+      return;
+    }
+    const res=await tryParent(u,p);
+    if(res==='ok') return openApp('parent');
+    $('err').textContent = res==='many' ? 'Ek se zyada student mile. Mobile number likhein.' : 'Naam/mobile ya PIN galat hai';
+  }catch(e){
+    $('err').textContent='Connect nahi hua. Internet check karein.';
+  }finally{
+    $('go').disabled=false;
+  }
+}
+if(window.TD_I18N) TD_I18N.apply(document.body);
+// If this phone is already logged in, open the app straight away
+(function autoOpen(){
+  const role=localStorage.getItem('td_role');
+  if(role==='teacher' && localStorage.getItem('td_tok')) openApp('teacher');
+  else if(role==='parent' && localStorage.getItem('td_parent')) openApp('parent');
+})();
+</script>
+</body>
+</html>
