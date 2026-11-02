@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SAHID🪪</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2b2a8f">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SAHID">
 <style>
 :root{--bg:#eef0fb;--card:#fff;--ink:#141733;--mute:#5d6285;--line:#d9dcf0;--p:#0a9f3e;--a:#e0245e;--h:#f08a1c;--brand:#2b2a8f;--on:#fff;--neon:#17d4e8;--pink:#ff3d8b;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -170,5 +177,6 @@ function render(){view.id?detail():home()}
 render();
 })();
 </script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){try{navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}})}</script>
 </body>
 </html>
