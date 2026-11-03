@@ -2,7 +2,7 @@
   "name": "SAHID🪪",
   "short_name": "SAHID🪪",
   "description": "Attendance and payment tracker",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -27,5 +27,6 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "id": "./"
 }
